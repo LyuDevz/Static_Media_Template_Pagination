@@ -1,15 +1,23 @@
 from django.shortcuts import render,get_object_or_404,redirect
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from .models import Blog
 from .forms import BlogForm
-
 
 def home(request):
     blogs = Blog.objects.all()
     paginator = Paginator(blogs, 3)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    return render(request,'home.html',{'page_obj':page_obj})
+    page = request.GET.get('page')
+    page_obj = paginator.get_page(page)
+
+    try:
+        page_obj = paginator.page(page)
+    except PageNotAnInteger:
+        page = 1
+        page_obj = paginator.page(page)
+    except EmptyPage:
+        page = paginator.num_pages
+        page_obj = paginator.page(page)
+    return render(request,'home.html',{'page_obj':page_obj, 'paginator':paginator})
 
 def detail(request, blog_id):
     blog = get_object_or_404(Blog, pk=blog_id)
@@ -69,4 +77,11 @@ def delete(request, blog_id):
     return redirect('home')
 
 
+def search(request):
+    if request.method=="POST":
+        searched = request.POST['searched']
+        searched_blogs = Blog.objects.filter(title__contains=searched)
+        return render(request, 'searched.html', {'searched':searched, 'searched_blogs': searched_blogs})
+    else:
+        return render(request, 'searched.html', {})
 
